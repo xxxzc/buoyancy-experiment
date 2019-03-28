@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>浮力实验</title>
+	<link rel="stylesheet" href="buefy/buefy.min.css">
+	<style>
+		#app {
+			position: absolute;
+			width: 400px;
+			top: 4%;
+			left: 2%;
+		}
+	</style>
+</head>
+
+<body>
+	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+	<script src="buefy/buefy.min.js"></script>
+
+	<header style="text-align: center; margin: 10px" class="title is-4">
+		浮力实验
+	</header>
+
+	<div class="container">
+		<canvas id="playground" width="0" height="0"></canvas>
+		<div id="app" class="card">
+			<header class="card-header">
+				<p class="card-header-title">
+					控制面板
+				</p>
+			</header>
+			<div class="card-content">
+				<!-- <header><strong>重力加速度</strong></header> -->
+				<b-field grounped>
+					<b-field label="重力加速度" expanded>
+						<b-field>
+							<p class="control">
+								<span class="button is-small is-static">x</span>
+							</p>
+							<b-input size="is-small" type="number" step="0.1" v-model="gravity_x"></b-input>
+							<p class="control">
+								<span class="button is-small is-static">s/m<sup>2</sup></span>
+							</p>
+							<p class="control">
+								<span class="button is-small is-static">y</span>
+							</p>
+							<b-input size="is-small" type="number" step="0.1" v-model="gravity_y"></b-input>
+							<p class="control">
+								<span class="button is-small is-static">s/m<sup>2</sup></span>
+							</p>
+						</b-field>
+					</b-field>
+				</b-field>
+				<b-field label="液体密度">
+					<b-field>
+						<b-select size="is-small" v-model="liquid_type" placeholder="自定义">
+							<option v-for="liquid in liquids" :value="liquid.value" :key="liquid.value">
+								{{liquid.name}}</option>
+						</b-select>
+						<b-input size="is-small" type="number" step="0.1" v-model="liquid_density">
+						</b-input>
+						<p class="control">
+							<span class="button is-small is-static">kg/m<sup>3</sup></span>
+						</p>
+					</b-field>
+				</b-field>
+				<b-field label="绘制物体">
+					<b-field>
+						<p class="control">
+							<span class="button is-small is-static">类型</span>
+						</p>
+						<b-select size="is-small" v-model="object_type">
+							<option v-for="o in object_types" :value="o.type" :key="o.type">
+								{{o.label}}</option>
+						</b-select>
+						<p class="control">
+							<span class="button is-small is-static">物体密度</span>
+						</p>
+						<b-input size="is-small" type="number" step="0.1" v-model="object_density">
+						</b-input>
+						<p class="control">
+							<span class="button is-small is-static">kg/m<sup>3</sup></span>
+						</p>
+					</b-field>
+				</b-field>
+				<b-field grouped group-multiline>
+					<div class="control" v-if="object_type === 'Circle'">
+						<b-taglist attached>
+							<b-tag type="is-danger">半径</b-tag>
+							<b-tag type="is-light">{{object_radius.toFixed(2)}} m</b-tag>
+						</b-taglist>
+					</div>
+					<div class="control" v-if="object_type === 'Box'">
+						<b-taglist attached>
+							<b-tag type="is-danger">宽</b-tag>
+							<b-tag type="is-light">{{object_width.toFixed(2)}} m</b-tag>
+						</b-taglist>
+					</div>
+					<div class="control" v-if="object_type === 'Box'">
+						<b-taglist attached>
+							<b-tag type="is-danger">高</b-tag>
+							<b-tag type="is-light">{{object_height.toFixed(2)}} m</b-tag>
+						</b-taglist>
+					</div>
+					<div class="control">
+						<b-taglist attached>
+							<b-tag type="is-warning">面积</b-tag>
+							<b-tag type="is-light">{{object_area.toFixed(2)}} m<sup>2</sup></b-tag>
+						</b-taglist>
+					</div>
+				</b-field>
+				<b-field :label="'当前选中: ' + selected_type" v-if="selected_type">
+					<b-field>
+						<p class="control">
+							<span class="button is-small is-static">密度</span>
+						</p>
+						<b-input size="is-small" type="number" step="0.1" v-model="selected_density"></b-input>
+						<p class="control">
+							<span class="button is-small is-static">kg/m<sup>3</sup></span>
+						</p>
+						<b-field v-if="selected_type === 'Circle'">
+							<p class="control">
+								<span class="button is-small is-static">半径</span>
+							</p>
+							<b-input size="is-small" type="number" step="0.1" v-model="selected_radius"></b-input>
+							<p class="control">
+								<span class="button is-small is-static">m</span>
+							</p>
+						</b-field>
+					</b-field>
+				</b-field>
+				<b-field v-if="selected_type === 'Box'">
+					<p class="control">
+						<span class="button is-small is-static">宽</span>
+					</p>
+					<b-input size="is-small" type="number" step="0.1" v-model="selected_width">
+					</b-input>
+					<p class="control">
+						<span class="button is-small is-static">m</span>
+					</p>
+					<p class="control">
+						<span class="button is-small is-static">长</span>
+					</p>
+					<b-input size="is-small" type="number" step="0.1" v-model="selected_height">
+					</b-input>
+					<p class="control">
+						<span class="button is-small is-static">m</span>
+					</p>
+				</b-field>
+				<b-field grouped group-multiline v-if="selected_type">
+					<div class="control">
+						<b-taglist attached>
+							<b-tag type="is-warning">面积</b-tag>
+							<b-tag type="is-light">{{selected_area.toFixed(2)}} m<sup>2</sup></b-tag>
+						</b-taglist>
+					</div>
+					<div class="control">
+						<b-taglist attached>
+							<b-tag type="is-warning">液体中面积</b-tag>
+							<b-tag type="is-light">{{selected_area_in_liquid.toFixed(2)}} m<sup>2</sup></b-tag>
+						</b-taglist>
+					</div>
+					<div class="control">
+						<b-taglist attached>
+							<b-tag type="is-info">重力</b-tag>
+							<b-tag type="is-light">{{(selected_area * gravity_y * selected_density).toFixed(2)}} N
+							</b-tag>
+						</b-taglist>
+					</div>
+					<div class="control">
+						<b-taglist attached>
+							<b-tag type="is-info">浮力</b-tag>
+							<b-tag type="is-light">{{selected_buoyancy.toFixed(2)}} N</b-tag>
+						</b-taglist>
+					</div>
+				</b-field>
+			</div>
+		</div>
+	</div>
+	<!--JS-->
+	<script type="text/javascript" src="js/Box2dWeb-2.1.a.3.js" charset="utf-8"></script>
+	<script type="module" src="js/index.js" charset="utf-8"></script>
+</body>
+
+</html>
