@@ -146,7 +146,7 @@ window.onload = function () {
     resizeCanvas();
 
     // world
-    world = new b2World(new b2Vec2(app.gravity_x, app.gravity_y), true);
+    world = new b2World(new b2Vec2(app.gravity_x, app.gravity_y), false);
 
     // creator for create body
     creator = new Creator(world);
