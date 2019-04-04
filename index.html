@@ -6,9 +6,9 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>浮力实验</title>
 	<link rel="icon" href="fav.ico">
-	<link rel="stylesheet" href="buefy/buefy.min.css">
+	<link rel="stylesheet" href="modules/buefy.min.css">
 	<style>
-		#app {
+		#controller {
 			position: absolute;
 			width: 400px;
 			top: 4%;
@@ -18,8 +18,8 @@
 </head>
 
 <body>
-	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
-	<script src="buefy/buefy.min.js"></script>
+	<script src="modules/vue.min.js"></script>
+	<script src="modules/buefy.min.js"></script>
 
 	<header style="text-align: center; margin: 10px" class="title is-4">
 		浮力实验
@@ -27,117 +27,123 @@
 
 	<div class="container">
 		<canvas id="playground" width="0" height="0"></canvas>
-		<div id="app" class="card">
+
+		<div id="controller" class="card">
 			<header class="card-header">
 				<p class="card-header-title">
 					控制面板
 				</p>
 			</header>
 			<div class="card-content">
-				<!-- <header><strong>重力加速度</strong></header> -->
 				<b-field grounped>
+					<!-- gravity -->
 					<b-field label="重力加速度" expanded>
 						<b-field>
 							<p class="control">
 								<span class="button is-small is-static">x</span>
 							</p>
-							<b-input size="is-small" type="number" step="0.1" v-model="gravity_x"></b-input>
+							<b-input size="is-small" type="number" step="0.1" v-model="gravity.x"></b-input>
 							<p class="control">
 								<span class="button is-small is-static">s/m<sup>2</sup></span>
 							</p>
 							<p class="control">
 								<span class="button is-small is-static">y</span>
 							</p>
-							<b-input size="is-small" type="number" step="0.1" v-model="gravity_y"></b-input>
+							<b-input size="is-small" type="number" step="0.1" v-model="gravity.y"></b-input>
 							<p class="control">
 								<span class="button is-small is-static">s/m<sup>2</sup></span>
 							</p>
 						</b-field>
 					</b-field>
 				</b-field>
+				<!-- liquid density -->
 				<b-field label="液体密度">
 					<b-field>
-						<b-select size="is-small" v-model="liquid_type" placeholder="自定义">
-							<option v-for="liquid in liquids" :value="liquid.value" :key="liquid.value">
-								{{liquid.name}}</option>
+						<b-select size="is-small" v-model="liquid.type" placeholder="自定义">
+							<option v-for="liquid in liquid_types" :value="liquid.value" :key="liquid.value">
+								{{liquid.name}}
+							</option>
 						</b-select>
-						<b-input size="is-small" type="number" step="0.1" v-model="liquid_density">
+						<b-input size="is-small" type="number" step="0.1" v-model="liquid.density">
 						</b-input>
 						<p class="control">
 							<span class="button is-small is-static">kg/m<sup>3</sup></span>
 						</p>
 					</b-field>
 				</b-field>
+				<!-- draw object -->
 				<b-field label="绘制物体">
 					<b-field>
 						<p class="control">
 							<span class="button is-small is-static">类型</span>
 						</p>
-						<b-select size="is-small" v-model="object_type">
-							<option v-for="o in object_types" :value="o.type" :key="o.type">
+						<b-select size="is-small" v-model="object.shape">
+							<option v-for="o in object_shapes" :value="o.type" :key="o.type">
 								{{o.label}}</option>
 						</b-select>
 						<p class="control">
 							<span class="button is-small is-static">物体密度</span>
 						</p>
-						<b-input size="is-small" type="number" step="0.1" v-model="object_density">
+						<b-input size="is-small" type="number" step="0.1" v-model="object.density">
 						</b-input>
 						<p class="control">
 							<span class="button is-small is-static">kg/m<sup>3</sup></span>
 						</p>
 					</b-field>
 				</b-field>
-				<b-field grouped group-multiline>
-					<div class="control" v-if="object_type === 'Circle'">
+				<!-- show draw information according to draw types -->
+				<b-field grouped group-multiline v-if="object.area > 0">
+					<div class="control" v-if="object.shape === 'Circle'">
 						<b-taglist attached>
 							<b-tag type="is-danger">半径</b-tag>
-							<b-tag type="is-light">{{object_radius.toFixed(2)}} m</b-tag>
+							<b-tag type="is-light">{{object.data.radius.toFixed(2)}} m</b-tag>
 						</b-taglist>
 					</div>
-					<div class="control" v-if="object_type === 'Box'">
+					<div class="control" v-if="object.shape === 'Box'">
 						<b-taglist attached>
 							<b-tag type="is-danger">宽</b-tag>
-							<b-tag type="is-light">{{object_width.toFixed(2)}} m</b-tag>
+							<b-tag type="is-light">{{object.data.width.toFixed(2)}} m</b-tag>
 						</b-taglist>
 					</div>
-					<div class="control" v-if="object_type === 'Box'">
+					<div class="control" v-if="object.shape === 'Box'">
 						<b-taglist attached>
 							<b-tag type="is-danger">高</b-tag>
-							<b-tag type="is-light">{{object_height.toFixed(2)}} m</b-tag>
+							<b-tag type="is-light">{{object.data.height.toFixed(2)}} m</b-tag>
 						</b-taglist>
 					</div>
 					<div class="control">
 						<b-taglist attached>
 							<b-tag type="is-warning">面积</b-tag>
-							<b-tag type="is-light">{{object_area.toFixed(2)}} m<sup>2</sup></b-tag>
+							<b-tag type="is-light">{{object.area.toFixed(2)}} m<sup>2</sup></b-tag>
 						</b-taglist>
 					</div>
 				</b-field>
-				<b-field :label="'当前选中: ' + selected_type" v-if="selected_type">
+				<!-- current selected object -->
+				<b-field :label="'当前选中: ' + selected.shape" v-if="selected.shape">
 					<b-field>
 						<p class="control">
 							<span class="button is-small is-static">密度</span>
 						</p>
-						<b-input size="is-small" type="number" step="0.1" v-model="selected_density"></b-input>
+						<b-input size="is-small" type="number" step="0.1" v-model="selected.density"></b-input>
 						<p class="control">
 							<span class="button is-small is-static">kg/m<sup>3</sup></span>
 						</p>
-						<b-field v-if="selected_type === 'Circle'">
+						<b-field v-if="selected.shape === 'Circle'">
 							<p class="control">
 								<span class="button is-small is-static">半径</span>
 							</p>
-							<b-input size="is-small" type="number" step="0.1" v-model="selected_radius"></b-input>
+							<b-input size="is-small" type="number" step="0.1" v-model="selected.data.radius"></b-input>
 							<p class="control">
 								<span class="button is-small is-static">m</span>
 							</p>
 						</b-field>
 					</b-field>
 				</b-field>
-				<b-field v-if="selected_type === 'Box'">
+				<b-field v-if="selected.shape === 'Box'">
 					<p class="control">
 						<span class="button is-small is-static">宽</span>
 					</p>
-					<b-input size="is-small" type="number" step="0.1" v-model="selected_width">
+					<b-input size="is-small" type="number" step="0.1" v-model="selected.data.width">
 					</b-input>
 					<p class="control">
 						<span class="button is-small is-static">m</span>
@@ -145,36 +151,36 @@
 					<p class="control">
 						<span class="button is-small is-static">长</span>
 					</p>
-					<b-input size="is-small" type="number" step="0.1" v-model="selected_height">
+					<b-input size="is-small" type="number" step="0.1" v-model="selected.data.height">
 					</b-input>
 					<p class="control">
 						<span class="button is-small is-static">m</span>
 					</p>
 				</b-field>
-				<b-field grouped group-multiline v-if="selected_type">
+				<b-field grouped group-multiline v-if="selected.shape">
 					<div class="control">
 						<b-taglist attached>
 							<b-tag type="is-warning">面积</b-tag>
-							<b-tag type="is-light">{{selected_area.toFixed(2)}} m<sup>2</sup></b-tag>
+							<b-tag type="is-light">{{selected.area.toFixed(2)}} m<sup>2</sup></b-tag>
 						</b-taglist>
 					</div>
 					<div class="control">
 						<b-taglist attached>
 							<b-tag type="is-warning">液体中面积</b-tag>
-							<b-tag type="is-light">{{selected_area_in_liquid.toFixed(2)}} m<sup>2</sup></b-tag>
+							<b-tag type="is-light">{{selected.area_in_liquid.toFixed(2)}} m<sup>2</sup></b-tag>
 						</b-taglist>
 					</div>
 					<div class="control">
 						<b-taglist attached>
 							<b-tag type="is-info">重力</b-tag>
-							<b-tag type="is-light">{{(selected_area * gravity_y * selected_density).toFixed(2)}} N
+							<b-tag type="is-light">{{(selected.area * gravity.y * selected.density).toFixed(2)}} N
 							</b-tag>
 						</b-taglist>
 					</div>
 					<div class="control">
 						<b-taglist attached>
 							<b-tag type="is-info">浮力</b-tag>
-							<b-tag type="is-light">{{selected_buoyancy.toFixed(2)}} N</b-tag>
+							<b-tag type="is-light">{{selected.buoyancy.toFixed(2)}} N</b-tag>
 						</b-taglist>
 					</div>
 				</b-field>
@@ -182,8 +188,258 @@
 		</div>
 	</div>
 	<!--JS-->
-	<script type="text/javascript" src="js/Box2dWeb-2.1.a.3.js" charset="utf-8"></script>
-	<script type="module" src="js/index.js" charset="utf-8"></script>
+	<script type="text/javascript" src="modules/Box2dWeb-2.1.a.3.js" charset="utf-8"></script>
+	<script type="module">
+	import DrawEvent from './js/event.js';
+	import Buoyancy from './js/buoyancy.js';
+	import Box2dHelper from './js/box2dHelper.js'
+
+	const b2World = Box2D.Dynamics.b2World,
+		b2Vec2 = Box2D.Common.Math.b2Vec2,
+		b2Body = Box2D.Dynamics.b2Body,
+		b2DebugDraw = Box2D.Dynamics.b2DebugDraw,
+		b2Math = Box2D.Common.Math.b2Math,
+		b2MouseJointDef = Box2D.Dynamics.Joints.b2MouseJointDef,
+		b2AABB = Box2D.Collision.b2AABB,
+		b2Color = Box2D.Common.b2Color;
+	const scale = 30;
+	let canvas, ctx, world, buoyancy, drawEvent, debugDraw;
+	let canvasWidth, canvasHeight;
+	let mouseJoint = null;
+	let selectedBody = null, selectedFixture = null, selectedShape = null;
+
+	function to_float(str) {
+		let f = Math.max(Math.min(parseFloat(str), 5), 0.1);
+		return f;
+	}
+
+	var controller = new Vue({
+		el: '#controller',
+		data: {
+			gravity: { x: 0.0, y: 9.8 },
+			liquid_densitys: {
+				c: 0.0, w4: 1.0, g: 0.72, h: 1.50, b0: 3.12, m: 13.6
+			},
+			liquid_types: [
+				{ name: '自定义', value: 'c' }, 
+				{ name: '水 4℃', value: 'w4' }, 
+				{ name: '汽油', value: 'g' }, 
+				{ name: '蜂蜜', value: 'h' }, 
+				{ name: '溴 0℃', value: 'b0' }, 
+				{ name: '水银', value: 'm' }
+			],
+			liquid: {
+				density: 1.0, type: 'w4'
+			},
+			object_shapes: [
+				{ label: '圆形', type: 'Circle' },
+				{ label: '矩形', type: 'Box' },
+				{ label: '多边形', type: 'Polygon' }
+			],
+			object: {
+				density: 1.0,
+				shape: 'Circle',
+				data: { radius: 0.0, width: 0.0, height: 0.0 },
+				area: 0.0
+			},
+			selected: {
+				shape: null,
+				density: 0.0,
+				area: 0.0, area_in_liquid: 0.0,
+				buoyancy: 0.0,
+				data: { radius: 0.0, width: 0.0, height: 0.0 }
+			}
+		},
+		watch: {
+			'gravity.x': function (cur) {
+				if (cur)
+					world.SetGravity(Box2dHelper.Vec2(to_float(cur), to_float(this.gravity.y)));
+			},
+			'gravity.y': function (cur) {
+				if (cur)
+					world.SetGravity(Box2dHelper.Vec2(to_float(this.gravity.x), to_float(cur)));
+			},
+			'liquid.type': function (cur, old) {
+				if (cur !== 'c')
+					this.liquid.density = this.liquid_densitys[cur];
+			},
+			'liquid.density': function (cur) {
+				if (cur)
+					buoyancy.setDensity(cur);
+				if (cur !== this.liquid_densitys[this.liquid.type])
+					this.liquid.type = 'c';
+			},
+			'selected.density': function (cur) {
+				if (cur) {
+					selectedBody.ResetMassData();
+					selectedFixture.SetDensity(to_float(cur));
+				}
+			},
+			'selected.data.height': function (cur) {
+				if (cur) {
+					selectedShape.SetAsBox(to_float(this.selected.data.width)/2, 
+						to_float(cur)/2);
+				}
+			},
+			'selected.data.width': function (cur) {
+				if (cur) {
+					selectedShape.SetAsBox(to_float(cur)/2, 
+						to_float(this.selected.data.height)/2);
+				}
+			},
+			'selected.data.radius': function (cur) {
+				if (cur) {
+					selectedShape.SetRadius(to_float(cur));
+				}
+			}
+		}
+	})
+
+	function updateSelectedBody(body, all=true) {
+		if (all) {
+			selectedBody = body;
+			selectedFixture = Box2dHelper.getFixture(body);
+			selectedShape = selectedFixture.GetShape();
+			controller.selected = Object.assign(controller.selected, selectedBody.GetUserData());
+			if (controller.selected.shape === 'Circle') {
+				controller.selected.data.radius = selectedFixture.GetShape().GetRadius();
+			} else if (controller.selected.shape === 'Box') {
+				let points = selectedShape.GetVertices();
+				controller.selected.data.width = points[1].x - points[0].x;
+				controller.selected.data.height = points[2].y - points[1].y;
+			}
+		}
+		let data = selectedBody.GetUserData();
+		controller.selected.density = selectedFixture.GetDensity();
+		controller.selected.area = Box2dHelper.computeMass(selectedFixture.GetShape());
+		controller.selected.area_in_liquid = data.area_in_liquid || 0.0;
+		controller.selected.buoyancy = Math.abs(data.buoyancy && data.buoyancy.y) || 0.0;
+		if (controller.selected.buoyancy < 0.02)
+			controller.selected.buoyancy = 0.0;
+	}
+
+	window.onload = function () {
+		canvas = document.getElementById('playground');
+
+		// resize canvas
+		window.addEventListener("resize", resizeCanvas);
+		function resizeCanvas() {
+			canvas.width = Math.min(Math.round(window.innerWidth / scale) * scale, 1400);
+			canvas.height = Math.max(Math.round(window.innerHeight / scale) * scale * 0.7, 600);
+			canvasWidth = canvas.width / scale;
+			canvasHeight = canvas.height / scale;
+		}
+		resizeCanvas();
+
+		// world
+		// world = new b2World(new b2Vec2(controller.gravity_x, controller.gravity_y), false);
+		world = new b2World(new b2Vec2(controller.gravity.x, controller.gravity.y), false);
+
+		// setup debug draw
+		debugDraw = new b2DebugDraw();
+		debugDraw.SetSprite(canvas.getContext("2d"));
+		debugDraw.SetDrawScale(scale);
+		debugDraw.SetFillAlpha(0.5);
+		debugDraw.SetLineThickness(1.0);
+		debugDraw.SetFlags(
+			b2DebugDraw.e_shapeBit
+			| b2DebugDraw.e_jointBit
+			// | b2DebugDraw.e_aabbBit
+		);
+		world.SetDebugDraw(debugDraw);
+
+		// handle mouse and touch event
+		drawEvent = new DrawEvent(canvas, debugDraw, scale);
+
+		// create ground
+		let ground = 10 / scale;
+		Box2dHelper.createBox(world, canvasWidth/2, canvasHeight-ground,
+			canvas.width, ground, b2Body.b2_staticBody);
+
+		// create fluid pool
+		buoyancy = new Buoyancy(world, canvasWidth/13*9, canvasHeight-ground*2,
+			canvasWidth/6, canvasHeight/5);
+		buoyancy.setDensity(controller.liquid.density);
+
+		// add a box
+		let test = Box2dHelper.createBody(world, Box2dHelper.Vec2(canvasWidth / 7 * 5, 10),
+			'Box', Box2dHelper.Vec2(1, 1), { density: 0.5 });
+		updateSelectedBody(test);
+
+
+		// update the world
+		window.setInterval(function update() {
+			world.Step(1 / 60, 8, 4);
+
+			// get current mouse position
+			let position = drawEvent.getMovePosition();
+
+			// body under mouse ?
+			if (!mouseJoint) {
+				let body = Box2dHelper.getBodyAtPosition(world, position);
+				if (body) {
+					updateSelectedBody(body);
+
+					let md = new b2MouseJointDef();
+					md.bodyA = world.GetGroundBody();
+					md.bodyB = body;
+					md.target.Set(position.x, position.y);
+					md.collideConnected = true;
+					md.maxForce = 300.0 * body.GetMass();
+					mouseJoint = world.CreateJoint(md);
+					body.SetAwake(true);
+				}
+			} else {
+				// move body to position
+				mouseJoint.SetTarget(position);
+			}
+
+			// if move stop
+			if (drawEvent.isMoveEnd()) {
+				if (mouseJoint) {
+					world.DestroyJoint(mouseJoint);
+            		mouseJoint = null;
+				} else { // add body to world
+					let points = drawEvent.getMovePoints();
+					if (points.length > 2) {
+						let shape = controller.object.shape;
+						let data = drawEvent['draw' + shape]();
+						if (controller.object.area > 0.2) {
+							let body = Box2dHelper.createBody(world, data.center, shape, data.data, {
+								density: controller.object.density
+							});
+							updateSelectedBody(body);
+						}
+						controller.object.area = 0;
+					}
+				}
+				// tell drawEvent that move-end event was handled.
+				drawEvent.resetMoveState();
+			}
+
+			// update selected body info (area, buoyancy...)
+			updateSelectedBody(selectedBody, false);
+
+			world.DrawDebugData();
+
+			// drawing according to shape you selected
+			if (drawEvent.getMoveState() > -1 && !mouseJoint) {
+				let data = drawEvent['draw' + controller.object.shape]();
+				if (controller.object.shape === 'Circle') {
+					controller.object.data.radius = data.data;
+					controller.object.area = data.data * data.data * Math.PI;
+				}
+				else if (controller.object.shape === 'Box') {
+					controller.object.data.width = data.data.x * 2;
+					controller.object.data.height = data.data.y * 2;
+					controller.object.area = data.data.x * data.data.y * 4;
+				}
+			}
+
+			world.ClearForces();
+		}, 1000/60);
+	};
+	</script>
 </body>
 
 </html>
